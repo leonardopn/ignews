@@ -7,7 +7,6 @@ export function SignInButton() {
     const isUserLoggedIn = true;
     const [session] = useSession();
 
-    console.log(session);
 
     return session ? (
         <button className={styles.signInButton} type="button" onClick={()=> signOut()}>
