@@ -1,11 +1,22 @@
 import { GetStaticProps } from "next";
 import Head from "next/head";
 import React from "react";
-import { getPrimicClient } from "../../services/prismic";
+import { getPrismicClient } from "../../services/prismic";
 import styles from "./styles.module.scss";
 import Prismic from "@prismicio/client";
+import { RichText } from "prismic-dom";
 
-export default function Posts() {
+type Post = {
+    slug: string;
+    title: string;
+    excerpt: string;
+    updatedAt: string;
+};
+interface PostsProps {
+    posts: Post[];
+}
+
+export default function Posts({ posts }: PostsProps) {
     return (
         <>
             <Head>
@@ -14,36 +25,13 @@ export default function Posts() {
 
             <main className={styles.container}>
                 <div className={styles.posts}>
-                    <a href="#">
-                        <time>12 de março de 2021</time>
-                        <strong>Criando um Blog com contador de visitas usando NextJS e MongoDB</strong>
-                        <p>
-                            Neste post vamos aprender a criar um Blog com NextJS, usando o MongoDB para gerenciar um
-                            contador de visitas em cada post e exibir no preview da home page. Usaremos a Fetch API para
-                            buscar os dados e o SWR para nos auxiliar nas revalidações dos mesmos. No final vamos
-                            hospedar em produção usando a Vercel.
-                        </p>
-                    </a>
-                    <a href="#">
-                        <time>12 de março de 2021</time>
-                        <strong>Criando um Blog com contador de visitas usando NextJS e MongoDB</strong>
-                        <p>
-                            Neste post vamos aprender a criar um Blog com NextJS, usando o MongoDB para gerenciar um
-                            contador de visitas em cada post e exibir no preview da home page. Usaremos a Fetch API para
-                            buscar os dados e o SWR para nos auxiliar nas revalidações dos mesmos. No final vamos
-                            hospedar em produção usando a Vercel.
-                        </p>
-                    </a>
-                    <a href="#">
-                        <time>12 de março de 2021</time>
-                        <strong>Criando um Blog com contador de visitas usando NextJS e MongoDB</strong>
-                        <p>
-                            Neste post vamos aprender a criar um Blog com NextJS, usando o MongoDB para gerenciar um
-                            contador de visitas em cada post e exibir no preview da home page. Usaremos a Fetch API para
-                            buscar os dados e o SWR para nos auxiliar nas revalidações dos mesmos. No final vamos
-                            hospedar em produção usando a Vercel.
-                        </p>
-                    </a>
+                    {posts.map((post) => (
+                        <a key={post.slug} href="#">
+                            <time>{post.updatedAt}</time>
+                            <strong>{post.title}</strong>
+                            <p>{post.excerpt}</p>
+                        </a>
+                    ))}
                 </div>
             </main>
         </>
@@ -51,12 +39,23 @@ export default function Posts() {
 }
 
 export const getStaticProps: GetStaticProps = async () => {
-    const prismic = getPrimicClient();
+    const prismic = getPrismicClient();
     const response = await prismic.query([Prismic.predicates.at("document.type", "publication")], {
         fetch: ["publication.title", "publication.content"],
         pageSize: 100,
     });
 
-    console.log(JSON.stringify(response, null, 2));
-    return { props: {} };
+    const posts = response.results.map((post) => {
+        return {
+            slug: post.uid,
+            title: RichText.asText(post.data.title),
+            excerpt: post.data.content.find((content) => content.type === "paragraph")?.text ?? "",
+            updatedAt: new Date(post.last_publication_date).toLocaleDateString("pt-BR", {
+                day: "2-digit",
+                month: "long",
+                year: "numeric",
+            }),
+        };
+    });
+    return { props: { posts } };
 };
